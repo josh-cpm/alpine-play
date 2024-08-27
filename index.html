@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Tailwind Playground</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script
+			defer
+			src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"
+		></script>
+		<script>
+			document.addEventListener('alpine:init', () => {
+				Alpine.store('recipe', {
+					ingredients: [
+						{ name: 'Whole wheat flour', quantity: 600, type: 'flour' },
+						{ name: 'Water', quantity: 450, type: 'liquid' },
+						{ name: 'Salt', quantity: 12, type: 'salt' },
+						{ name: 'Levain/sourdough starter', quantity: 80, type: 'levain' },
+						{ name: 'Mixed Seeds', quantity: 100, type: 'mix-in' },
+					],
+					method: [
+						`Mix all ingredients together until no dry spots remain, then allow 8 hours of resting/rising time.`,
+						`Dump all ingredients into an oiled or paper-lined loaf pan, then place in the refridgerator overnight.`,
+						`Preheat oven to 450, then bake bread straight from the refridgerator for 1 hour.`,
+					],
+					get totalDoughmass() {
+						return this.ingredients.reduce(
+							(prev, cur) => prev + parseInt(cur.quantity),
+							0
+						);
+					},
+					get doughHydration() {
+						const liquid = this.ingredients
+							.filter((ing) => ing.type == 'liquid')
+							.reduce((prev, cur) => prev + parseInt(cur.quantity), 0);
+						const flour = this.ingredients
+							.filter((ing) => ing.type == 'flour')
+							.reduce((prev, cur) => prev + parseInt(cur.quantity), 0);
+						return liquid / flour;
+					},
+					recipeData: {
+						author: `Josh Petrovani Miller`,
+						description: `A very low-maintainence & healthy bread recipe. I recommend using organic flour. Any combination of seeds is fine - I like to use a mix of flax, sunflower and sesame seeds.`,
+						time: `18-24 hours`,
+					},
+					defaults: {
+						ingredientTypes: [
+							'flour',
+							'liquid',
+							'salt',
+							'levain',
+							'yeast',
+							'mix-in',
+						],
+					},
+				});
+			});
+		</script>
+	</head>
+	<body
+		x-data="{popupOpen: false, ingEditor: false, ing: {}, methodEditor: false, stepIndex: ''}"
+		@editingredient="popupOpen = true; ingEditor=true; ing = $event.detail;"
+    @editstep="popupOpen = true; methodEditor = true; stepIndex = $event.detail"
+		class="bg-slate-700"
+	>
+		<!-- Popup -->
+		<template x-data x-if="popupOpen">
+			<div class="absolute inset-0 flex align-center justify-center">
+				<div class=" bg-white m-auto">
+					<div class="p-8">
+						<!-- Ingredient Editor -->
+						<div x-show="ingEditor">
+							<h2 class="text-xl font-bold mb-2">Edit Ingredient</h2>
+							<div class="mb-4 flex flex-col gap-2">
+								<div>Name: <input x-data x-model="ing.name" type="text" /></div>
+								<div>
+									Quantity:
+									<input x-data x-model="ing.quantity" type="number" />
+								</div>
+								<div>
+									Type:
+									<select x-model="ing.type" name="ingType" id="ingType">
+										<template
+											x-data
+											x-for="ingType in $store.recipe.defaults.ingredientTypes"
+										>
+											<option
+												x-text="ingType"
+												x-bind:selected="ingType==ing.type"
+											></option>
+										</template>
+									</select>
+								</div>
+                <div>
+                  <button @click="$store.recipe.ingredients.splice(ing.rIndex, 1); popupOpen = false; methodEditor = false" 
+                  class="text-red-700 font-bold"
+                  >Delete ingredient</button>
+                </div>
+							</div>
+							<button
+								@click="popupOpen = false; ingEditor = false;"
+								class="bg-slate-700 text-slate-50 py-2 px-8 rounded"
+							>
+								Done
+							</button>
+						</div>
+						<div x-show="methodEditor">
+							<!-- Method-step editor -->
+							<h2 class="text-xl font-bold mb-2">Edit Step</h2>
+							<div class="mb-4 ">
+								<textarea x-model="$store.recipe.method[stepIndex]" 
+                class="h-40"
+                ></textarea>
+                <div>
+                  <button @click="$store.recipe.method.splice(stepIndex, 1); popupOpen = false; methodEditor = false" 
+                  class="text-slate-700 font-bold"
+                  >Delete step</button>
+                </div>
+								</div>
+                  <button
+                    @click="popupOpen = false; methodEditor = false"
+                    class="bg-slate-700 text-slate-50 py-2 px-8 rounded"
+                  >
+                    Done
+                  </button>
+
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</template>
+		<!-- Main -->
+		<main
+			class="m-auto max-w-md bg-slate-700 h-screen font-sans text-slate-300"
+		>
+			<div class="sm:border border-slate-300 my-8">
+				<div class="m-8">
+					<div class="mb-8">
+						<h1 class="text-4xl font-extrabold font-serif mb-2">
+							Whole Grain Bread
+						</h1>
+						<p
+							class="mb-2"
+							x-data
+							x-text="$store.recipe.recipeData.description"
+						></p>
+						<p>
+							<span class="">Time: </span>
+							<span x-data x-text="$store.recipe.recipeData.time"></span>
+						</p>
+						<p>
+							<span class="">Dough mass: </span>
+							<span x-data x-text="$store.recipe.totalDoughmass"></span>
+						</p>
+						<p>
+							<span class="">Dough hydration: </span>
+							<span
+								x-data
+								x-text="Math.round(100 * $store.recipe.doughHydration) + '%'"
+							></span>
+						</p>
+					</div>
+					<div class="mb-8">
+						<h2 class="text-xl font-bold font-serif mb-2">Ingredients</h2>
+						<p class="mb-2 italic">Tap any ingredient to edit it.</p>
+						<ul class="list-disc list-outside ml-4">
+							<template
+								x-data
+								x-for="(ing, index) in $store.recipe.ingredients"
+								:key="ing.name"
+							>
+								<li
+                  
+									@click="ing.rIndex = index; $dispatch('editingredient', ing)"
+									class="mb-1 last:mb-0"
+								>
+									<span
+										class="font-bold"
+										x-text="ing.quantity + ' g - '"
+									></span>
+									<span x-text="ing.name"></span>
+								</li>
+							</template>
+						</ul>
+					</div>
+					<div class="mb-8">
+						<h2 class="text-xl font-bold font-serif mb-2">Method</h2>
+						<ol class="list-decimal list-outside ml-4">
+							<template x-data x-for="(step, index) in $store.recipe.method" :key="step">
+								<li 
+                @click="$dispatch('editstep', index)"
+                class="mb-1 last:mb-0" x-text="step"></li>
+							</template>
+						</ol>
+					</div>
+          <div >
+            <div class="flex justify-center align-center justify-around">
+              <button x-on:click="alert(`Thanks for wanting to share my recipe ☺️`)" class="bg-slate-300 text-slate-700 py-2 px-8 rounded">
+                Share Recipe
+              </button>
+              <!-- <button  class="bg-slate-300 text-slate-700 py-2 px-8 rounded">
+                Edit recipe
+              </button> -->
+				</div>
+			</div>
+		</main>
+	</body>
+</html>
